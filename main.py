@@ -280,4 +280,4 @@ def main(dataset, method, sig_level, ts_scale=True, standard_scale=True):
     auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset,
             ts_scale=ts_scale, standard_scale=standard_scale)
 
-main('alcoholic_1', 'lr', sig_level=2)
+main('alcoholic_12', 'svc', sig_level=2)
