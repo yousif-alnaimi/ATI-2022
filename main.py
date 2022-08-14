@@ -121,7 +121,7 @@ def read_alcoholic(subset='1'):
     return X_train, y_train, X_test, y_test
 
 
-def ml_method_setup(method, params, X_train, sig_train, y_train, dataset):
+def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     if method == 'ts_knn':
         try:
             clf = joblib.load(open(f'models/{dataset}_ts_knn.pkl', 'rb'))
@@ -215,7 +215,7 @@ def ml_method_setup(method, params, X_train, sig_train, y_train, dataset):
     return clf
 
 
-def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, ts_scale=True, standard_scale=True):
+def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_scale=True, standard_scale=True):
     start = time.time()
 
     # initialise scalers
@@ -241,18 +241,14 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, ts_scale=True, 
         sig_train = sig_train_unscaled
         sig_test = sig_test_unscaled
 
-    # Logistic Regression GridSearch
-    lr = LogisticRegression(random_state=0)
-    parameters = {'C': [0.1, 0.2, 0.5, 1, 2, 5, 10],
-                  'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
-    clf = GridSearchCV(lr, parameters, n_jobs=10)
-    clf.fit(sig_train, y_train)
+    clf = ml_method_setup(method, X_train, sig_train, y_train, dataset)
 
     # fit to data
     y_pred_proba = clf.predict_proba(sig_test)[:, 1]
     y_pred = clf.predict(sig_test)
     cv_score = cross_val_score(clf, sig_train, y_train, scoring='roc_auc', n_jobs=-1)
     bc = BinaryClassification(y_test, y_pred_proba, labels=["Class 0", "Class 1"])
+
     # Figures
     plt.figure(figsize=(5, 5))
     bc.plot_roc_curve()
@@ -268,5 +264,18 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, ts_scale=True, 
     print(cv_score, "mean CV on Train = " + str(cv_score.mean()))
 
     end = time.time()
-
     print(end - start)
+
+
+def main(dataset, method, sig_level, ts_scale=True, standard_scale=True):
+    if dataset == 'alcoholic_1':
+        X_train, y_train, X_test, y_test = read_alcoholic(subset='1')
+    elif dataset == 'alcoholic_12':
+        X_train, y_train, X_test, y_test = read_alcoholic(subset='12')
+    elif dataset == 'alcoholic_21':
+        X_train, y_train, X_test, y_test = read_alcoholic(subset='21')
+    else:
+        X_train, y_train, X_test, y_test = (None, None, None, None)
+
+    auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset,
+            ts_scale=ts_scale, standard_scale=standard_scale)
