@@ -209,8 +209,13 @@ def ml_method_setup(method, params, X_train, sig_train, y_train, dataset):
             clf.fit(sig_train, y_train)
             joblib.dump(clf.best_estimator_, f'models/{dataset}_rf.pkl')
 
+    else:
+        clf = None
 
-def auto_ml(X_train, y_train, X_test, y_test, sig_level, ts_scale=True, standard_scale=True):
+    return clf
+
+
+def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, ts_scale=True, standard_scale=True):
     start = time.time()
 
     # initialise scalers
