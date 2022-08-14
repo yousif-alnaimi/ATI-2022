@@ -1,0 +1,14 @@
+--extra-index-url https://download.pytorch.org/whl/cu111
+torch==1.8.1+cu111
+signatory==1.2.6.1.8.1
+numpy==1.22.4
+pandas==1.4.3
+scikit-learn==1.1.2
+seaborn==0.11.2
+matplotlib==3.5.2
+scikit-learn==1.1.2
+tslearn==0.5.2
+joblib
+plot_metric
+tqdm
+iisignature
