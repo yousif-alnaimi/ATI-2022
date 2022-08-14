@@ -2,15 +2,6 @@ import signatory
 from tslearn.datasets import UCR_UEA_datasets
 import torch
 import time
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_auc_score, accuracy_score
-import os
-import pandas as pd
-from tqdm import tqdm
-import numpy as np
-from tslearn.preprocessing import TimeSeriesScalerMinMax
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import matplotlib.pyplot as plt
@@ -32,6 +23,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_sco
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import f1_score
+import joblib
 
 
 def read_alcoholic(subset='1'):
@@ -129,45 +121,94 @@ def read_alcoholic(subset='1'):
     return X_train, y_train, X_test, y_test
 
 
-def ml_method_setup(method, params, X_train, sig_train, y_train):
+def ml_method_setup(method, params, X_train, sig_train, y_train, dataset):
     if method == 'ts_knn':
-        clf = GridSearchCV(
-            Pipeline([
-                ('knn', KNeighborsTimeSeriesClassifier())
-            ]),
-            {'knn__n_neighbors': [3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25], 'knn__weights': ['uniform', 'distance']},
-            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
-            n_jobs=-1
-        )
+        try:
+            clf = joblib.load(open(f'models/{dataset}_ts_knn.pkl', 'rb'))
+        except:
+            clf = GridSearchCV(
+                Pipeline([
+                    ('knn', KNeighborsTimeSeriesClassifier())
+                ]),
+                {'knn__n_neighbors': [3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25], 'knn__weights': ['uniform', 'distance']},
+                cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
+                n_jobs=-1
+            )
+            clf.fit(X_train, y_train)
+            joblib.dump(clf.best_estimator_, f'models/{dataset}_ts_knn.pkl')
 
     elif method == 'ts_svc':
-        clf = GridSearchCV(
-            Pipeline([
-                ('svc', TimeSeriesSVC(random_state=0, probability=True))
-            ]),
-            {'svc__kernel': ['gak', 'rbf', 'poly'], 'svc__shrinking': [True, False],
-             'svc__C': [0.1, 0.2, 0.5, 1, 2, 5, 10]},
-            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
-            n_jobs=-1
-        )
+        try:
+            clf = joblib.load(open(f'models/{dataset}_ts_svc.pkl', 'rb'))
+        except:
+            clf = GridSearchCV(
+                Pipeline([
+                    ('svc', TimeSeriesSVC(random_state=0, probability=True))
+                ]),
+                {'svc__kernel': ['gak', 'rbf', 'poly'], 'svc__shrinking': [True, False],
+                 'svc__C': [0.1, 0.2, 0.5, 1, 2, 5, 10]},
+                cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
+                n_jobs=-1
+            )
+            clf.fit(X_train, y_train)
+            joblib.dump(clf.best_estimator_, f'models/{dataset}_ts_svc.pkl')
 
     elif method == 'lr':
-        lr = LogisticRegression(random_state=0)
-        parameters = {'C': [0.1, 0.2, 0.5, 1, 2, 5, 10],
-                      'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
-        clf = GridSearchCV(lr, parameters, n_jobs=-1)
+        try:
+            clf = joblib.load(open(f'models/{dataset}_lr.pkl', 'rb'))
+        except:
+            lr = LogisticRegression(random_state=0)
+            parameters = {'C': [0.1, 0.2, 0.5, 1, 2, 5, 10],
+                          'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
+            clf = GridSearchCV(lr, parameters, n_jobs=-1)
+            clf.fit(sig_train, y_train)
+            joblib.dump(clf.best_estimator_, f'{dataset}_lr.pkl')
 
     elif method == 'svc':
         try:
-            clf = joblib.load()
+            clf = joblib.load(open(f'models/{dataset}_svc.pkl', 'rb'))
         except:
             svc = SVC(random_state=0, probability=True)
             parameters = {'kernel': ['rbf', 'poly'], 'shrinking': [True, False],
                           'C': [0.1, 0.2, 0.5, 1, 2, 5, 10]}
             clf = GridSearchCV(svc, parameters, n_jobs=-1)
             clf.fit(sig_train, y_train)
+            joblib.dump(clf.best_estimator_, f'models/{dataset}_svc.pkl')
 
-    elif method == ''
+    elif method == 'knn':
+        try:
+            clf = joblib.load(open(f'models/{dataset}_knn.pkl', 'rb'))
+        except:
+            knn = KNeighborsClassifier()
+            parameters = {'n_neighbors': range(3, 30, 2), 'weights': ['uniform', 'distance']}
+            clf = GridSearchCV(knn, parameters, n_jobs=-1)
+            clf.fit(sig_train, y_train)
+            joblib.dump(clf.best_estimator_, f'models/{dataset}_knn.pkl')
+
+    elif method == 'ada':
+        try:
+            clf = joblib.load(open(f'models/{dataset}_ada.pkl', 'rb'))
+        except:
+            ada = AdaBoostClassifier(random_state=0)
+            parameters = {'n_estimators': [50, 100, 150], 'learning_rate': [0.1, 0.5, 1, 2]}
+            clf = GridSearchCV(ada, parameters, n_jobs=-1)
+            clf.fit(sig_train, y_train)
+            joblib.dump(clf.best_estimator_, f'models/{dataset}_ada.pkl')
+
+    elif method == 'rf':
+        try:
+            clf = joblib.load(open(f'models/{dataset}_rf.pkl', 'rb'))
+        except:
+            rf = RandomForestClassifier(random_state=0)
+            parameters = {'min_weight_fraction_leaf': [0.01, 0.1, 0.5],
+                          'bootstrap': [True, False],
+                          'max_depth': (2, 5, 10),
+                          'max_leaf_nodes': (2, 5, 10),
+                          'n_estimators': (100, 200, 300)}
+            clf = GridSearchCV(rf, parameters, n_jobs=-1)
+            clf.fit(sig_train, y_train)
+            joblib.dump(clf.best_estimator_, f'models/{dataset}_rf.pkl')
+
 
 def auto_ml(X_train, y_train, X_test, y_test, sig_level, ts_scale=True, standard_scale=True):
     start = time.time()
@@ -183,9 +224,9 @@ def auto_ml(X_train, y_train, X_test, y_test, sig_level, ts_scale=True, standard
     X_train_torch = torch.from_numpy(X_train).cuda()
     X_test_torch = torch.from_numpy(X_test).cuda()
 
-    sig_train_unscaled = signatory.signature(X_train_torch, 2)
+    sig_train_unscaled = signatory.signature(X_train_torch, sig_level)
     sig_train_unscaled = sig_train_unscaled.cpu().numpy()
-    sig_test_unscaled = signatory.signature(X_test_torch, 2)
+    sig_test_unscaled = signatory.signature(X_test_torch, sig_level)
     sig_test_unscaled = sig_test_unscaled.cpu().numpy()
 
     if standard_scale:
