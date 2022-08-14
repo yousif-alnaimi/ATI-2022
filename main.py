@@ -1,20 +1,16 @@
 import signatory
-from tslearn.datasets import UCR_UEA_datasets
 import torch
 import time
-import numpy as np  # linear algebra
-import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import datetime
-import iisignature as sig
 from tqdm import tqdm
-from plotly.offline import init_notebook_mode, iplot
 from plot_metric.functions import BinaryClassification
 from tslearn.neighbors import KNeighborsTimeSeriesClassifier
 from tslearn.svm import TimeSeriesSVC
 from tslearn.preprocessing import TimeSeriesScalerMinMax
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
@@ -47,11 +43,10 @@ def read_alcoholic(subset='1'):
     # run through every file in the train directory and import it, using information from the
     # matching condition column to determine which experiment was being conducted.
     # using this, put the data into the corresponding numpy array
-    filenames_list = os.listdir('SMNI_CMI_TRAIN/Train')  ## list of file names in the directory
-    EEG_data = pd.DataFrame({})  ## create an empty df that will hold data from each file
+    filenames_list = os.listdir('SMNI_CMI_TRAIN/Train')
 
     for file_name in tqdm(filenames_list):
-        temp_df = pd.read_csv('SMNI_CMI_TRAIN/Train/' + file_name)  ## read from the file to df
+        temp_df = pd.read_csv('SMNI_CMI_TRAIN/Train/' + file_name)
         if temp_df["matching condition"][0] == "S1 obj":
             s1_X_train_unscaled[s1] = np.transpose(np.array(temp_df["sensor value"]).reshape([64, 256]))
             s1_y_train[s1] = classifier[temp_df['subject identifier'][0]]
@@ -88,7 +83,7 @@ def read_alcoholic(subset='1'):
         if file_name == "Test":
             pass
         else:
-            temp_df = pd.read_csv('SMNI_CMI_TEST/' + file_name)  ## read from the file to df
+            temp_df = pd.read_csv('SMNI_CMI_TEST/' + file_name)
             if temp_df["matching condition"][0] == "S1 obj":
                 t1_X_test_unscaled[t1] = np.transpose(np.array(temp_df["sensor value"]).reshape([64, 256]))
                 t1_y_test[t1] = classifier[temp_df['subject identifier'][0]]
@@ -117,6 +112,11 @@ def read_alcoholic(subset='1'):
         y_train = s21_y_train
         X_test = t21_X_test_unscaled
         y_test = t21_y_test
+    else:
+        X_train = None
+        y_train = None
+        X_test = None
+        y_test = None
 
     return X_train, y_train, X_test, y_test
 
@@ -162,7 +162,7 @@ def ml_method_setup(method, params, X_train, sig_train, y_train, dataset):
                           'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
             clf = GridSearchCV(lr, parameters, n_jobs=-1)
             clf.fit(sig_train, y_train)
-            joblib.dump(clf.best_estimator_, f'{dataset}_lr.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{dataset}_lr.pkl')
 
     elif method == 'svc':
         try:
@@ -253,7 +253,6 @@ def auto_ml(X_train, y_train, X_test, y_test, sig_level, ts_scale=True, standard
     bc.plot_roc_curve()
     plt.title("Receiver Operating Characteristic Using Logistic Regression")
     plt.show()
-    score = roc_auc_score(y_test, y_pred_proba)
     accuracy = accuracy_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, y_pred_proba)
     f1 = f1_score(y_test, y_pred)
