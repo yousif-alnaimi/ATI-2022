@@ -20,9 +20,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import f1_score
 import joblib
+import h5py
 
 
-def read_alcoholic(subset='1'):
+def write_alcoholic(subset='1'):
     # S1: S1 obj - a single object shown;
     s1 = 0
     # S12: S2 nomatch - object 2 shown in a non-matching condition (S1 differed from S2)
@@ -118,6 +119,23 @@ def read_alcoholic(subset='1'):
         X_test = None
         y_test = None
 
+    f = h5py.File("data/data.h5", 'a')
+    grp = f.create_group(f"alcoholic_{subset}")
+    grp.create_dataset("X_train", data=X_train)
+    grp.create_dataset("y_train", data=y_train)
+    grp.create_dataset("X_test", data=X_test)
+    grp.create_dataset("y_test", data=y_test)
+
+    return X_train, y_train, X_test, y_test
+
+
+def read_data(dataset="alcoholic_1"):
+    data = h5py.File("data/data.h5", 'r')
+    X_train = data[f"{dataset}/X_train"][:]
+    y_train = data[f"{dataset}/y_train"][:]
+    X_test = data[f"{dataset}/X_test"][:]
+    y_test = data[f"{dataset}/y_test"][:]
+
     return X_train, y_train, X_test, y_test
 
 
@@ -125,7 +143,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     if method == 'ts_knn':
         try:
             clf = joblib.load(open(f'models/{dataset}_ts_knn.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             clf = GridSearchCV(
                 Pipeline([
                     ('knn', KNeighborsTimeSeriesClassifier())
@@ -140,7 +158,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'ts_svc':
         try:
             clf = joblib.load(open(f'models/{dataset}_ts_svc.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             clf = GridSearchCV(
                 Pipeline([
                     ('svc', TimeSeriesSVC(random_state=0, probability=True))
@@ -156,7 +174,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'lr':
         try:
             clf = joblib.load(open(f'models/{dataset}_lr.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             lr = LogisticRegression(random_state=0)
             parameters = {'C': [0.1, 0.2, 0.5, 1, 2, 5, 10],
                           'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
@@ -167,7 +185,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'svc':
         try:
             clf = joblib.load(open(f'models/{dataset}_svc.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             svc = SVC(random_state=0, probability=True)
             parameters = {'kernel': ['rbf', 'poly'], 'shrinking': [True, False],
                           'C': [0.1, 0.2, 0.5, 1, 2, 5, 10]}
@@ -178,7 +196,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'knn':
         try:
             clf = joblib.load(open(f'models/{dataset}_knn.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             knn = KNeighborsClassifier()
             parameters = {'n_neighbors': range(3, 30, 2), 'weights': ['uniform', 'distance']}
             clf = GridSearchCV(knn, parameters, n_jobs=-1)
@@ -188,7 +206,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'ada':
         try:
             clf = joblib.load(open(f'models/{dataset}_ada.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             ada = AdaBoostClassifier(random_state=0)
             parameters = {'n_estimators': [50, 100, 150], 'learning_rate': [0.1, 0.5, 1, 2]}
             clf = GridSearchCV(ada, parameters, n_jobs=-1)
@@ -198,7 +216,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'rf':
         try:
             clf = joblib.load(open(f'models/{dataset}_rf.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             rf = RandomForestClassifier(random_state=0)
             parameters = {'min_weight_fraction_leaf': [0.01, 0.1, 0.5],
                           'bootstrap': [True, False],
@@ -217,6 +235,11 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
 
 def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_scale=True, standard_scale=True):
     start = time.time()
+
+    method_dict = {"rf": "Random Forests", "ada": "AdaBoost", "knn": "K Nearest Neighbours",
+                   "svc": "Support Vector Machines", "lr": "Logistic Regression",
+                   "ts_svc": "Time Series Support Vector Machines",
+                   "ts_knn": "Time Series K Nearest Neighbours"}
 
     # initialise scalers
     ts_scaler = TimeSeriesScalerMinMax()
@@ -244,16 +267,23 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     clf = ml_method_setup(method, X_train, sig_train, y_train, dataset)
 
     # fit to data
-    y_pred_proba = clf.predict_proba(sig_test)[:, 1]
-    y_pred = clf.predict(sig_test)
-    cv_score = cross_val_score(clf, sig_train, y_train, scoring='roc_auc', n_jobs=-1)
-    bc = BinaryClassification(y_test, y_pred_proba, labels=["Class 0", "Class 1"])
+    if method.startswith("ts"):
+        y_pred_proba = clf.predict_proba(X_test)[:, 1]
+        y_pred = clf.predict(X_test)
+        cv_score = cross_val_score(clf, X_train, y_train, scoring='roc_auc', n_jobs=-1)
+    else:
+        y_pred_proba = clf.predict_proba(sig_test)[:, 1]
+        y_pred = clf.predict(sig_test)
+        cv_score = cross_val_score(clf, sig_train, y_train, scoring='roc_auc', n_jobs=-1)
 
     # Figures
-    plt.figure(figsize=(5, 5))
-    bc.plot_roc_curve()
-    plt.title("Receiver Operating Characteristic Using Logistic Regression")
-    plt.show()
+    if len(np.unique(y_test)) == 2:
+        plt.figure(figsize=(5, 5))
+        bc = BinaryClassification(y_test, y_pred_proba, labels=["Class 0", "Class 1"])
+        bc.plot_roc_curve()
+        plt.title(f"Receiver Operating Characteristic Using {method_dict[method]}")
+        plt.savefig(f"graphs/{dataset}_{method}.png")
+
     accuracy = accuracy_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, y_pred_proba)
     f1 = f1_score(y_test, y_pred)
@@ -268,16 +298,19 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
 
 
 def main(dataset, method, sig_level, ts_scale=True, standard_scale=True):
-    if dataset == 'alcoholic_1':
-        X_train, y_train, X_test, y_test = read_alcoholic(subset='1')
-    elif dataset == 'alcoholic_12':
-        X_train, y_train, X_test, y_test = read_alcoholic(subset='12')
-    elif dataset == 'alcoholic_21':
-        X_train, y_train, X_test, y_test = read_alcoholic(subset='21')
-    else:
-        X_train, y_train, X_test, y_test = (None, None, None, None)
+    X_train, y_train, X_test, y_test = read_data(dataset)
 
     auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset,
             ts_scale=ts_scale, standard_scale=standard_scale)
 
-main('alcoholic_12', 'svc', sig_level=2)
+start1 = time.time()
+method_dict = {"rf": "Random Forests", "ada": "AdaBoost", "knn": "K Nearest Neighbours",
+               "svc": "Support Vector Machines", "lr": "Logistic Regression",
+               "ts_svc": "Time Series Support Vector Machines",
+               "ts_knn": "Time Series K Nearest Neighbours"}
+for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
+    for j in method_dict.keys():
+        print(i, j)
+        main(i, j, sig_level=2)
+
+print("AAAAAAAAAAA", time.time()-start1)
