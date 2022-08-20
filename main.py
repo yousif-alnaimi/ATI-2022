@@ -249,13 +249,23 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
         X_train = ts_scaler.fit_transform(X_train)
         X_test = ts_scaler.fit_transform(X_test)
 
-    X_train_torch = torch.from_numpy(X_train).cuda()
-    X_test_torch = torch.from_numpy(X_test).cuda()
+    if torch.cuda.is_available():
+        X_train_torch = torch.from_numpy(X_train).cuda()
+        X_test_torch = torch.from_numpy(X_test).cuda()
 
-    sig_train_unscaled = signatory.signature(X_train_torch, sig_level)
-    sig_train_unscaled = sig_train_unscaled.cpu().numpy()
-    sig_test_unscaled = signatory.signature(X_test_torch, sig_level)
-    sig_test_unscaled = sig_test_unscaled.cpu().numpy()
+        sig_train_unscaled = signatory.signature(X_train_torch, sig_level)
+        sig_train_unscaled = sig_train_unscaled.cpu().numpy()
+        sig_test_unscaled = signatory.signature(X_test_torch, sig_level)
+        sig_test_unscaled = sig_test_unscaled.cpu().numpy()
+
+    else:
+        X_train_torch = torch.from_numpy(X_train)
+        X_test_torch = torch.from_numpy(X_test)
+
+        sig_train_unscaled = signatory.signature(X_train_torch, sig_level)
+        sig_train_unscaled = sig_train_unscaled.numpy()
+        sig_test_unscaled = signatory.signature(X_test_torch, sig_level)
+        sig_test_unscaled = sig_test_unscaled.numpy()
 
     if standard_scale:
         sig_train = scaler.fit_transform(sig_train_unscaled)
