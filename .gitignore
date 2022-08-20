@@ -30,6 +30,7 @@ SMNI_CMI_TEST/
 SMNI_CMI_TRAIN/
 data/
 models/
+zip/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
