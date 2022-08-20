@@ -8,7 +8,7 @@ seaborn==0.11.2
 matplotlib==3.5.2
 scikit-learn==1.1.2
 tslearn==0.5.2
-joblib
-plot_metric
-tqdm
-iisignature
+joblib==1.1.0
+plot-metric==0.0.6
+tqdm==4.64.0
+iisignature==0.24

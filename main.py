@@ -125,7 +125,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     if method == 'ts_knn':
         try:
             clf = joblib.load(open(f'models/{dataset}_ts_knn.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             clf = GridSearchCV(
                 Pipeline([
                     ('knn', KNeighborsTimeSeriesClassifier())
@@ -140,7 +140,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'ts_svc':
         try:
             clf = joblib.load(open(f'models/{dataset}_ts_svc.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             clf = GridSearchCV(
                 Pipeline([
                     ('svc', TimeSeriesSVC(random_state=0, probability=True))
@@ -156,7 +156,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'lr':
         try:
             clf = joblib.load(open(f'models/{dataset}_lr.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             lr = LogisticRegression(random_state=0)
             parameters = {'C': [0.1, 0.2, 0.5, 1, 2, 5, 10],
                           'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
@@ -167,7 +167,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'svc':
         try:
             clf = joblib.load(open(f'models/{dataset}_svc.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             svc = SVC(random_state=0, probability=True)
             parameters = {'kernel': ['rbf', 'poly'], 'shrinking': [True, False],
                           'C': [0.1, 0.2, 0.5, 1, 2, 5, 10]}
@@ -178,7 +178,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'knn':
         try:
             clf = joblib.load(open(f'models/{dataset}_knn.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             knn = KNeighborsClassifier()
             parameters = {'n_neighbors': range(3, 30, 2), 'weights': ['uniform', 'distance']}
             clf = GridSearchCV(knn, parameters, n_jobs=-1)
@@ -188,7 +188,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'ada':
         try:
             clf = joblib.load(open(f'models/{dataset}_ada.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             ada = AdaBoostClassifier(random_state=0)
             parameters = {'n_estimators': [50, 100, 150], 'learning_rate': [0.1, 0.5, 1, 2]}
             clf = GridSearchCV(ada, parameters, n_jobs=-1)
@@ -198,7 +198,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     elif method == 'rf':
         try:
             clf = joblib.load(open(f'models/{dataset}_rf.pkl', 'rb'))
-        except:
+        except:  # noqa E722
             rf = RandomForestClassifier(random_state=0)
             parameters = {'min_weight_fraction_leaf': [0.01, 0.1, 0.5],
                           'bootstrap': [True, False],
@@ -217,6 +217,11 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
 
 def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_scale=True, standard_scale=True):
     start = time.time()
+
+    method_dict = {"rf": "Random Forests", "ada": "AdaBoost", "knn": "K Nearest Neighbours",
+                   "svc": "Support Vector Machines", "lr": "Logistic Regression",
+                   "ts_svc": "Time Series Support Vector Machines",
+                   "ts_knn": "Time Series K Nearest Neighbours"}
 
     # initialise scalers
     ts_scaler = TimeSeriesScalerMinMax()
@@ -252,7 +257,7 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     # Figures
     plt.figure(figsize=(5, 5))
     bc.plot_roc_curve()
-    plt.title("Receiver Operating Characteristic Using Logistic Regression")
+    plt.title(f"Receiver Operating Characteristic Using {method_dict[method]}")
     plt.show()
     accuracy = accuracy_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, y_pred_proba)
@@ -279,5 +284,6 @@ def main(dataset, method, sig_level, ts_scale=True, standard_scale=True):
 
     auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset,
             ts_scale=ts_scale, standard_scale=standard_scale)
+
 
 main('alcoholic_12', 'svc', sig_level=2)
