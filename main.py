@@ -303,14 +303,9 @@ def main(dataset, method, sig_level, ts_scale=True, standard_scale=True):
     auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset,
             ts_scale=ts_scale, standard_scale=standard_scale)
 
-start1 = time.time()
-method_dict = {"rf": "Random Forests", "ada": "AdaBoost", "knn": "K Nearest Neighbours",
-               "svc": "Support Vector Machines", "lr": "Logistic Regression",
-               "ts_svc": "Time Series Support Vector Machines",
-               "ts_knn": "Time Series K Nearest Neighbours"}
+
+method_list = ["rf", "ada", "knn", "svc", "lr", "ts_svc", "ts_knn"]
 for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
-    for j in method_dict.keys():
+    for j in method_list:
         print(i, j)
         main(i, j, sig_level=2)
-
-print("AAAAAAAAAAA", time.time()-start1)
