@@ -294,9 +294,16 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
         plt.title(f"Receiver Operating Characteristic Using {method_dict[method]}")
         plt.savefig(f"graphs/{dataset}_{method}.png")
 
+    score_df = pd.DataFrame(columns=["Accuracy", "AUC", "F1 Measure", "Mean CV on Train"], index=["value"])
     accuracy = accuracy_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, y_pred_proba)
     f1 = f1_score(y_test, y_pred)
+
+    score_df["Accuracy"] = accuracy
+    score_df["AUC"] = roc_auc
+    score_df["F1 Measure"] = f1
+    score_df["Mean CV on Train"] = cv_score.mean()
+    score_df.to_csv(f"results/{dataset}_{method}.csv")
 
     print("accuracy is " + str(accuracy))
     print("auc is " + str(roc_auc))
