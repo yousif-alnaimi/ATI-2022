@@ -121,10 +121,10 @@ def write_alcoholic(subset='1'):
 
     f = h5py.File("data/data.h5", 'a')
     grp = f.create_group(f"alcoholic_{subset}")
-    grp.create_dataset("X_train", data=X_train)
-    grp.create_dataset("y_train", data=y_train)
-    grp.create_dataset("X_test", data=X_test)
-    grp.create_dataset("y_test", data=y_test)
+    grp.create_dataset("X_train", data=X_train, compression="gzip", compression_opts=7)
+    grp.create_dataset("y_train", data=y_train, compression="gzip", compression_opts=7)
+    grp.create_dataset("X_test", data=X_test, compression="gzip", compression_opts=7)
+    grp.create_dataset("y_test", data=y_test, compression="gzip", compression_opts=7)
 
     return X_train, y_train, X_test, y_test
 
@@ -323,6 +323,7 @@ def main(dataset, method, sig_level, ts_scale=True, standard_scale=True):
 
 method_list = ["rf", "ada", "knn", "svc", "lr", "ts_svc", "ts_knn"]
 for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
+    # write_alcoholic(subset=i[10:])
     for j in method_list:
         print(i, j)
         main(i, j, sig_level=2)
