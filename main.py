@@ -139,10 +139,10 @@ def read_data(dataset="alcoholic_1"):
     return X_train, y_train, X_test, y_test
 
 
-def ml_method_setup(method, X_train, sig_train, y_train, dataset):
+def ml_method_setup(method, X_train, sig_train, y_train, file_name):
     if method == 'ts_knn':
         try:
-            clf = joblib.load(open(f'models/{dataset}_ts_knn.pkl', 'rb'))
+            clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             clf = GridSearchCV(
                 Pipeline([
@@ -150,14 +150,15 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
                 ]),
                 {'knn__n_neighbors': [3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25], 'knn__weights': ['uniform', 'distance']},
                 cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
-                n_jobs=-1
+                n_jobs=-1,
+                verbose=10
             )
             clf.fit(X_train, y_train)
-            joblib.dump(clf.best_estimator_, f'models/{dataset}_ts_knn.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
     elif method == 'ts_svc':
         try:
-            clf = joblib.load(open(f'models/{dataset}_ts_svc.pkl', 'rb'))
+            clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             clf = GridSearchCV(
                 Pipeline([
@@ -166,56 +167,57 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
                 {'svc__kernel': ['gak', 'rbf', 'poly'], 'svc__shrinking': [True, False],
                  'svc__C': [0.1, 0.2, 0.5, 1, 2, 5, 10]},
                 cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
-                n_jobs=-1
+                n_jobs=-1,
+                verbose=10
             )
             clf.fit(X_train, y_train)
-            joblib.dump(clf.best_estimator_, f'models/{dataset}_ts_svc.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
     elif method == 'lr':
         try:
-            clf = joblib.load(open(f'models/{dataset}_lr.pkl', 'rb'))
+            clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             lr = LogisticRegression(random_state=0)
             parameters = {'C': [0.1, 0.2, 0.5, 1, 2, 5, 10],
                           'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']}
-            clf = GridSearchCV(lr, parameters, n_jobs=-1)
+            clf = GridSearchCV(lr, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
-            joblib.dump(clf.best_estimator_, f'models/{dataset}_lr.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
     elif method == 'svc':
         try:
-            clf = joblib.load(open(f'models/{dataset}_svc.pkl', 'rb'))
+            clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             svc = SVC(random_state=0, probability=True)
             parameters = {'kernel': ['rbf', 'poly'], 'shrinking': [True, False],
                           'C': [0.1, 0.2, 0.5, 1, 2, 5, 10]}
-            clf = GridSearchCV(svc, parameters, n_jobs=-1)
+            clf = GridSearchCV(svc, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
-            joblib.dump(clf.best_estimator_, f'models/{dataset}_svc.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
     elif method == 'knn':
         try:
-            clf = joblib.load(open(f'models/{dataset}_knn.pkl', 'rb'))
+            clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             knn = KNeighborsClassifier()
             parameters = {'n_neighbors': range(3, 30, 2), 'weights': ['uniform', 'distance']}
-            clf = GridSearchCV(knn, parameters, n_jobs=-1)
+            clf = GridSearchCV(knn, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
-            joblib.dump(clf.best_estimator_, f'models/{dataset}_knn.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
     elif method == 'ada':
         try:
-            clf = joblib.load(open(f'models/{dataset}_ada.pkl', 'rb'))
+            clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             ada = AdaBoostClassifier(random_state=0)
             parameters = {'n_estimators': [50, 100, 150], 'learning_rate': [0.1, 0.5, 1, 2]}
-            clf = GridSearchCV(ada, parameters, n_jobs=-1)
+            clf = GridSearchCV(ada, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
-            joblib.dump(clf.best_estimator_, f'models/{dataset}_ada.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
     elif method == 'rf':
         try:
-            clf = joblib.load(open(f'models/{dataset}_rf.pkl', 'rb'))
+            clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             rf = RandomForestClassifier(random_state=0)
             parameters = {'min_weight_fraction_leaf': [0.01, 0.1, 0.5],
@@ -223,9 +225,9 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
                           'max_depth': (2, 5, 10),
                           'max_leaf_nodes': (2, 5, 10),
                           'n_estimators': (100, 200, 300)}
-            clf = GridSearchCV(rf, parameters, n_jobs=-1)
+            clf = GridSearchCV(rf, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
-            joblib.dump(clf.best_estimator_, f'models/{dataset}_rf.pkl')
+            joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
     else:
         clf = None
@@ -233,7 +235,12 @@ def ml_method_setup(method, X_train, sig_train, y_train, dataset):
     return clf
 
 
-def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_scale=True, standard_scale=True):
+def time_augment(arr):
+    return np.vstack((arr.T, np.linspace(0, 1, num=arr.shape[0]))).T
+
+
+def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_scale=True, standard_scale=True,
+            time_aug=False):
     start = time.time()
 
     method_dict = {"rf": "Random Forests", "ada": "AdaBoost", "knn": "K Nearest Neighbours",
@@ -244,6 +251,10 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     # initialise scalers
     ts_scaler = TimeSeriesScalerMinMax()
     scaler = StandardScaler()
+
+    if time_aug:
+        X_train = np.array(list(map(time_augment, X_train)))
+        X_test = np.array(list(map(time_augment, X_test)))
 
     if ts_scale:
         X_train = ts_scaler.fit_transform(X_train)
@@ -274,7 +285,18 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
         sig_train = sig_train_unscaled
         sig_test = sig_test_unscaled
 
-    clf = ml_method_setup(method, X_train, sig_train, y_train, dataset)
+    # file name formatting
+    file_name = f"{dataset}_{method}"
+    if not method.startswith("ts"):
+        file_name += f"_sig{sig_level}"
+    if ts_scale:
+        file_name += "_ts_scale"
+    if standard_scale:
+        file_name += "_standard_scale"
+    if time_aug:
+        file_name += "_time_aug"
+
+    clf = ml_method_setup(method, X_train, sig_train, y_train, file_name)
 
     # fit to data
     if method.startswith("ts"):
@@ -292,7 +314,7 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
         bc = BinaryClassification(y_test, y_pred_proba, labels=["Class 0", "Class 1"])
         bc.plot_roc_curve()
         plt.title(f"Receiver Operating Characteristic Using {method_dict[method]}")
-        plt.savefig(f"graphs/{dataset}_{method}.png")
+        plt.savefig(f"graphs/{file_name}.png")
 
     score_df = pd.DataFrame(columns=["Accuracy", "AUC", "F1 Measure", "Mean CV on Train"], index=["value"])
     accuracy = accuracy_score(y_test, y_pred)
@@ -303,7 +325,7 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     score_df["AUC"] = roc_auc
     score_df["F1 Measure"] = f1
     score_df["Mean CV on Train"] = cv_score.mean()
-    score_df.to_csv(f"results/{dataset}_{method}.csv")
+    score_df.to_csv(f"results/{file_name}.csv")
 
     print("accuracy is " + str(accuracy))
     print("auc is " + str(roc_auc))
@@ -314,16 +336,20 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     print(end - start)
 
 
-def main(dataset, method, sig_level, ts_scale=True, standard_scale=True):
+def main(dataset, method, sig_level, ts_scale=True, standard_scale=True, time_aug=False):
     X_train, y_train, X_test, y_test = read_data(dataset)
 
     auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset,
-            ts_scale=ts_scale, standard_scale=standard_scale)
+            ts_scale=ts_scale, standard_scale=standard_scale, time_aug=time_aug)
 
 
 method_list = ["rf", "ada", "knn", "svc", "lr", "ts_svc", "ts_knn"]
 for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
     # write_alcoholic(subset=i[10:])
     for j in method_list:
-        print(i, j)
-        main(i, j, sig_level=2)
+        for st in [True, False]:
+            for ts in [True, False]:
+                for sig in [1, 2]:
+                    for ta in [True, False]:
+                        print(i, j, st, ts, sig, ta)
+                        main(i, j, sig_level=sig, time_aug=ta, standard_scale=st, ts_scale=ts)
