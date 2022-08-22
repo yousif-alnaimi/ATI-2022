@@ -353,5 +353,17 @@ for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
             for ts in [True, False]:
                 for sig in [1, 2]:
                     for ta in [True, False]:
-                        print(i, j, st, ts, sig, ta)
-                        main(i, j, sig_level=sig, time_aug=ta, standard_scale=st, ts_scale=ts)
+                        file_name = f"{i}_{j}"
+                        if not j.startswith("ts"):
+                            file_name += f"_sig{sig}"
+                        if ts:
+                            file_name += "_ts_scale"
+                        if st:
+                            file_name += "_standard_scale"
+                        if ta:
+                            file_name += "_time_aug"
+                        if f"{file_name}.png" not in os.listdir("graphs"):
+                            print(i, j, st, ts, sig, ta)
+                            main(i, j, sig_level=sig, time_aug=ta, standard_scale=st, ts_scale=ts)
+                        else:
+                            print("Exists")
