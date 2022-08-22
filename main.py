@@ -343,7 +343,9 @@ def main(dataset, method, sig_level, ts_scale=True, standard_scale=True, time_au
             ts_scale=ts_scale, standard_scale=standard_scale, time_aug=time_aug)
 
 
-method_list = ["rf", "ada", "knn", "svc", "lr", "ts_svc", "ts_knn"]
+method_list = ["rf", "ada", "knn", "svc", "lr",
+               # "ts_svc", "ts_knn"
+               ]
 for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
     # write_alcoholic(subset=i[10:])
     for j in method_list:
