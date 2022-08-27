@@ -15,12 +15,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import roc_auc_score, accuracy_score
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import f1_score
 import joblib
 import h5py
+import mne
 
 data_list = ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']
 
@@ -129,6 +130,117 @@ def write_alcoholic(subset='1'):
     grp.create_dataset("y_test", data=y_test, compression="gzip", compression_opts=7)
 
     return X_train, y_train, X_test, y_test
+
+
+def write_motor_imagery():
+    raw_list_real_lr = []
+    ev_list_real_lr = []
+    raw_list_imagine_lr = []
+    ev_list_imagine_lr = []
+    raw_list_real_both = []
+    ev_list_real_both = []
+    raw_list_imagine_both = []
+    ev_list_imagine_both = []
+
+    subsets = ['mi_real_lr', 'mi_imagine_lr', 'mi_real_both', 'mi_imagine_both']
+
+    for subject in os.listdir("MI_RAW"):
+        if os.path.isdir(f"MI_RAW/{subject}"):
+            for i in os.listdir(f"MI_RAW/{subject}"):
+                if i.endswith(".edf"):
+                    run_no = int(i.split(".")[0][-2:])
+
+                    data = mne.io.read_raw_edf(f"MI_RAW/{subject}/{i}")
+                    raw_data = np.array(data.get_data()).T
+                    raw_ev = mne.events_from_annotations(data)[0]
+
+                    split_indices = raw_ev[:, 0]
+                    labels = raw_ev[:, 2]
+                    split_data = np.vsplit(raw_data, split_indices[1:])
+                    split_data = np.array(split_data)
+
+                    for k in range(len(split_data)):
+                        if run_no in {3, 7, 11}:
+                            raw_list_real_lr.append(split_data[k])
+                            ev_list_real_lr.append(labels[k])
+                        if run_no in {4, 8, 12}:
+                            raw_list_imagine_lr.append(split_data[k])
+                            ev_list_imagine_lr.append(labels[k])
+                        if run_no in {5, 9, 13}:
+                            raw_list_real_both.append(split_data[k])
+                            ev_list_real_both.append(labels[k])
+                        if run_no in {6, 10, 14}:
+                            raw_list_imagine_both.append(split_data[k])
+                            ev_list_imagine_both.append(labels[k])
+
+    shape_list_real_lr = []
+    shape_list_imagine_lr = []
+    shape_list_real_both = []
+    shape_list_imagine_both = []
+
+    for i in raw_list_real_lr:
+        shape_list_real_lr.append(i.shape[0])
+    for i in raw_list_imagine_lr:
+        shape_list_imagine_lr.append(i.shape[0])
+    for i in raw_list_real_both:
+        shape_list_real_both.append(i.shape[0])
+    for i in raw_list_imagine_both:
+        shape_list_imagine_both.append(i.shape[0])
+
+    max_length_real_lr = np.max(np.array(shape_list_real_lr))
+    max_length_imagine_lr = np.max(np.array(shape_list_imagine_lr))
+    max_length_real_both = np.max(np.array(shape_list_real_both))
+    max_length_imagine_both = np.max(np.array(shape_list_imagine_both))
+
+    for i in range(len(raw_list_real_lr)):
+        raw_list_real_lr[i] = np.pad(raw_list_real_lr[i],
+                                     [(0, max_length_real_lr - raw_list_real_lr[i].shape[0]), (0, 0)],
+                                     mode='constant')
+
+    for i in range(len(raw_list_imagine_lr)):
+        raw_list_imagine_lr[i] = np.pad(raw_list_imagine_lr[i],
+                                        [(0, max_length_imagine_lr - raw_list_imagine_lr[i].shape[0]), (0, 0)],
+                                        mode='constant')
+
+    for i in range(len(raw_list_real_both)):
+        raw_list_real_both[i] = np.pad(raw_list_real_both[i],
+                                       [(0, max_length_real_both - raw_list_real_both[i].shape[0]), (0, 0)],
+                                       mode='constant')
+
+    for i in range(len(raw_list_imagine_both)):
+        raw_list_imagine_both[i] = np.pad(raw_list_imagine_both[i],
+                                          [(0, max_length_imagine_both - raw_list_imagine_both[i].shape[0]), (0, 0)],
+                                          mode='constant')
+
+    raw_arr_real_lr = np.array(raw_list_real_lr)
+    ev_arr_real_lr = np.array(ev_list_real_lr)
+    raw_arr_imagine_lr = np.array(raw_list_imagine_lr)
+    ev_arr_imagine_lr = np.array(ev_list_imagine_lr)
+    raw_arr_real_both = np.array(raw_list_real_both)
+    ev_arr_real_both = np.array(ev_list_real_both)
+    raw_arr_imagine_both = np.array(raw_list_imagine_both)
+    ev_arr_imagine_both = np.array(ev_list_imagine_both)
+
+    for i in subsets:
+        if i.endswith("real_lr"):
+            X_train, X_test, y_train, y_test = train_test_split(raw_arr_real_lr, ev_arr_real_lr,
+                                                                test_size=0.25, random_state=0)
+        elif i.endswith("imagine_lr"):
+            X_train, X_test, y_train, y_test = train_test_split(raw_arr_imagine_lr, ev_arr_imagine_lr,
+                                                                test_size=0.25, random_state=0)
+        elif i.endswith("real_both"):
+            X_train, X_test, y_train, y_test = train_test_split(raw_arr_real_both, ev_arr_real_both,
+                                                                test_size=0.25, random_state=0)
+        elif i.endswith("imagine_both"):
+            X_train, X_test, y_train, y_test = train_test_split(raw_arr_imagine_both, ev_arr_imagine_both,
+                                                                test_size=0.25, random_state=0)
+
+        f = h5py.File("data/data.h5", 'a')
+        grp = f.require_group(i)
+        grp.create_dataset("X_train", data=X_train, compression="gzip", compression_opts=7)
+        grp.create_dataset("y_train", data=y_train, compression="gzip", compression_opts=7)
+        grp.create_dataset("X_test", data=X_test, compression="gzip", compression_opts=7)
+        grp.create_dataset("y_test", data=y_test, compression="gzip", compression_opts=7)
 
 
 def read_data(dataset="alcoholic_1"):
@@ -392,4 +504,5 @@ def run_all():
 
 
 if __name__ == '__main__':
-    run_all()
+    # run_all()
+    write_motor_imagery()

@@ -28,6 +28,7 @@ MANIFEST
 kaggle/
 SMNI_CMI_TEST/
 SMNI_CMI_TRAIN/
+MI_RAW/
 data/
 models/
 zip/
