@@ -148,7 +148,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, file_name):
                 Pipeline([
                     ('knn', KNeighborsTimeSeriesClassifier())
                 ]),
-                {'knn__n_neighbors': [3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25], 'knn__weights': ['uniform', 'distance']},
+                {'knn__n_neighbors': range(3, 30, 2), 'knn__weights': ['uniform', 'distance']},
                 cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
                 n_jobs=-1,
                 verbose=10
@@ -358,7 +358,7 @@ for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
                             file_name += f"_sig{sig}"
                         if ts:
                             file_name += "_ts_scale"
-                        if st:
+                        if st and not j.startswith("ts"):
                             file_name += "_standard_scale"
                         if ta:
                             file_name += "_time_aug"
@@ -367,3 +367,22 @@ for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
                             main(i, j, sig_level=sig, time_aug=ta, standard_scale=st, ts_scale=ts)
                         else:
                             print("Exists")
+
+method_list = [
+    # "rf", "ada", "knn", "svc", "lr",
+    "ts_svc", "ts_knn"
+]
+for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
+    for j in method_list:
+        for ts in [True]:
+            for ta in [True, False]:
+                file_name = f"{i}_{j}"
+                if ts:
+                    file_name += "_ts_scale"
+                if ta:
+                    file_name += "_time_aug"
+                if f"{file_name}.png" not in os.listdir("graphs"):
+                    print(i, j, ts, ta)
+                    main(i, j, sig_level=2, time_aug=ta, ts_scale=ts, standard_scale=False)
+                else:
+                    print("Exists")
