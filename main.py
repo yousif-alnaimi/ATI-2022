@@ -22,6 +22,8 @@ from sklearn.metrics import f1_score
 import joblib
 import h5py
 
+data_list = ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']
+
 
 def write_alcoholic(subset='1'):
     # S1: S1 obj - a single object shown;
@@ -343,46 +345,51 @@ def main(dataset, method, sig_level, ts_scale=True, standard_scale=True, time_au
             ts_scale=ts_scale, standard_scale=standard_scale, time_aug=time_aug)
 
 
-method_list = ["rf", "ada", "knn", "svc", "lr",
-               # "ts_svc", "ts_knn"
-               ]
-for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
-    # write_alcoholic(subset=i[10:])
-    for j in method_list:
-        for st in [True, False]:
-            for ts in [True, False]:
-                for sig in [1, 2]:
-                    for ta in [True, False]:
-                        file_name = f"{i}_{j}"
-                        if not j.startswith("ts"):
-                            file_name += f"_sig{sig}"
-                        if ts:
-                            file_name += "_ts_scale"
-                        if st and not j.startswith("ts"):
-                            file_name += "_standard_scale"
-                        if ta:
-                            file_name += "_time_aug"
-                        if f"{file_name}.png" not in os.listdir("graphs"):
-                            print(i, j, st, ts, sig, ta)
-                            main(i, j, sig_level=sig, time_aug=ta, standard_scale=st, ts_scale=ts)
-                        else:
-                            print("Exists")
+def run_all():
+    method_list = ["rf", "ada", "knn", "svc", "lr",
+                   # "ts_svc", "ts_knn"
+                   ]
+    for i in data_list:
+        # write_alcoholic(subset=i[10:])
+        for j in method_list:
+            for st in [True, False]:
+                for ts in [True, False]:
+                    for sig in [1, 2]:
+                        for ta in [True, False]:
+                            file_name = f"{i}_{j}"
+                            if not j.startswith("ts"):
+                                file_name += f"_sig{sig}"
+                            if ts:
+                                file_name += "_ts_scale"
+                            if st and not j.startswith("ts"):
+                                file_name += "_standard_scale"
+                            if ta:
+                                file_name += "_time_aug"
+                            if f"{file_name}.png" not in os.listdir("graphs"):
+                                print(i, j, st, ts, sig, ta)
+                                main(i, j, sig_level=sig, time_aug=ta, standard_scale=st, ts_scale=ts)
+                            else:
+                                print("Exists")
 
-method_list = [
-    # "rf", "ada", "knn", "svc", "lr",
-    "ts_svc", "ts_knn"
-]
-for i in ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']:
-    for j in method_list:
-        for ts in [True]:
-            for ta in [True, False]:
-                file_name = f"{i}_{j}"
-                if ts:
-                    file_name += "_ts_scale"
-                if ta:
-                    file_name += "_time_aug"
-                if f"{file_name}.png" not in os.listdir("graphs"):
-                    print(i, j, ts, ta)
-                    main(i, j, sig_level=2, time_aug=ta, ts_scale=ts, standard_scale=False)
-                else:
-                    print("Exists")
+    method_list = [
+        # "rf", "ada", "knn", "svc", "lr",
+        "ts_svc", "ts_knn"
+    ]
+    for i in data_list:
+        for j in method_list:
+            for ts in [True]:
+                for ta in [True, False]:
+                    file_name = f"{i}_{j}"
+                    if ts:
+                        file_name += "_ts_scale"
+                    if ta:
+                        file_name += "_time_aug"
+                    if f"{file_name}.png" not in os.listdir("graphs"):
+                        print(i, j, ts, ta)
+                        main(i, j, sig_level=2, time_aug=ta, ts_scale=ts, standard_scale=False)
+                    else:
+                        print("Exists")
+
+
+if __name__ == '__main__':
+    run_all()
