@@ -7,4 +7,4 @@ for i in os.listdir("results"):
     temp_df = pd.read_csv(f"results/{i}", header=0, index_col=0)
     df.loc[i[:-4], :] = temp_df.loc["value", :]
 
-df.to_csv("results/compiled.csv", header=True, index=True)
+df.to_csv("compiled.csv", header=True, index=True)
