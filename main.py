@@ -23,7 +23,8 @@ import joblib
 import h5py
 import mne
 
-data_list = ['alcoholic_1', 'alcoholic_12', 'alcoholic_21']
+data_list = ['alcoholic_1', 'alcoholic_12', 'alcoholic_21', 'mi_real_lr', 'mi_imagine_lr',
+             'mi_real_both', 'mi_imagine_both']
 
 
 def write_alcoholic(subset='1'):
@@ -173,44 +174,44 @@ def write_motor_imagery():
                             raw_list_imagine_both.append(split_data[k])
                             ev_list_imagine_both.append(labels[k])
 
-    shape_list_real_lr = []
-    shape_list_imagine_lr = []
-    shape_list_real_both = []
-    shape_list_imagine_both = []
-
-    for i in raw_list_real_lr:
-        shape_list_real_lr.append(i.shape[0])
-    for i in raw_list_imagine_lr:
-        shape_list_imagine_lr.append(i.shape[0])
-    for i in raw_list_real_both:
-        shape_list_real_both.append(i.shape[0])
-    for i in raw_list_imagine_both:
-        shape_list_imagine_both.append(i.shape[0])
-
-    max_length_real_lr = np.max(np.array(shape_list_real_lr))
-    max_length_imagine_lr = np.max(np.array(shape_list_imagine_lr))
-    max_length_real_both = np.max(np.array(shape_list_real_both))
-    max_length_imagine_both = np.max(np.array(shape_list_imagine_both))
-
-    for i in range(len(raw_list_real_lr)):
-        raw_list_real_lr[i] = np.pad(raw_list_real_lr[i],
-                                     [(0, max_length_real_lr - raw_list_real_lr[i].shape[0]), (0, 0)],
-                                     mode='constant')
-
-    for i in range(len(raw_list_imagine_lr)):
-        raw_list_imagine_lr[i] = np.pad(raw_list_imagine_lr[i],
-                                        [(0, max_length_imagine_lr - raw_list_imagine_lr[i].shape[0]), (0, 0)],
-                                        mode='constant')
-
-    for i in range(len(raw_list_real_both)):
-        raw_list_real_both[i] = np.pad(raw_list_real_both[i],
-                                       [(0, max_length_real_both - raw_list_real_both[i].shape[0]), (0, 0)],
-                                       mode='constant')
-
-    for i in range(len(raw_list_imagine_both)):
-        raw_list_imagine_both[i] = np.pad(raw_list_imagine_both[i],
-                                          [(0, max_length_imagine_both - raw_list_imagine_both[i].shape[0]), (0, 0)],
-                                          mode='constant')
+    # shape_list_real_lr = []
+    # shape_list_imagine_lr = []
+    # shape_list_real_both = []
+    # shape_list_imagine_both = []
+    #
+    # for i in raw_list_real_lr:
+    #     shape_list_real_lr.append(i.shape[0])
+    # for i in raw_list_imagine_lr:
+    #     shape_list_imagine_lr.append(i.shape[0])
+    # for i in raw_list_real_both:
+    #     shape_list_real_both.append(i.shape[0])
+    # for i in raw_list_imagine_both:
+    #     shape_list_imagine_both.append(i.shape[0])
+    #
+    # max_length_real_lr = np.max(np.array(shape_list_real_lr))
+    # max_length_imagine_lr = np.max(np.array(shape_list_imagine_lr))
+    # max_length_real_both = np.max(np.array(shape_list_real_both))
+    # max_length_imagine_both = np.max(np.array(shape_list_imagine_both))
+    #
+    # for i in range(len(raw_list_real_lr)):
+    #     raw_list_real_lr[i] = np.r_[raw_list_real_lr[i],
+    #                                 np.zeros((max_length_real_lr - raw_list_real_lr[i].shape[0], 64),
+    #                                          dtype=raw_list_real_lr[i].dtype)]
+    #
+    # for i in range(len(raw_list_imagine_lr)):
+    #     raw_list_imagine_lr[i] = np.r_[raw_list_imagine_lr[i],
+    #                                    np.zeros((max_length_imagine_lr - raw_list_imagine_lr[i].shape[0], 64),
+    #                                             dtype=raw_list_imagine_lr[i].dtype)]
+    #
+    # for i in range(len(raw_list_real_both)):
+    #     raw_list_real_both[i] = np.r_[raw_list_real_both[i],
+    #                                   np.zeros((max_length_real_both - raw_list_real_both[i].shape[0], 64),
+    #                                            dtype=raw_list_real_both[i].dtype)]
+    #
+    # for i in range(len(raw_list_imagine_both)):
+    #     raw_list_imagine_both[i] = np.r_[raw_list_imagine_both[i],
+    #                                      np.zeros((max_length_imagine_both - raw_list_imagine_both[i].shape[0], 64),
+    #                                               dtype=raw_list_imagine_both[i].dtype)]
 
     raw_arr_real_lr = np.array(raw_list_real_lr)
     ev_arr_real_lr = np.array(ev_list_real_lr)
@@ -235,38 +236,53 @@ def write_motor_imagery():
             X_train, X_test, y_train, y_test = train_test_split(raw_arr_imagine_both, ev_arr_imagine_both,
                                                                 test_size=0.25, random_state=0)
 
-        f = h5py.File("data/data.h5", 'a')
-        grp = f.require_group(i)
-        grp.create_dataset("X_train", data=X_train, compression="gzip", compression_opts=7)
-        grp.create_dataset("y_train", data=y_train, compression="gzip", compression_opts=7)
-        grp.create_dataset("X_test", data=X_test, compression="gzip", compression_opts=7)
-        grp.create_dataset("y_test", data=y_test, compression="gzip", compression_opts=7)
+        np.savez(f"data/{i}.npz", X_train, y_train, X_test, y_test)
 
 
 def read_data(dataset="alcoholic_1"):
-    data = h5py.File("data/data.h5", 'r')
-    X_train = data[f"{dataset}/X_train"][:]
-    y_train = data[f"{dataset}/y_train"][:]
-    X_test = data[f"{dataset}/X_test"][:]
-    y_test = data[f"{dataset}/y_test"][:]
+    if dataset.startswith("alcoholic"):
+        data = h5py.File("data/data.h5", 'r')
+        X_train = data[f"{dataset}/X_train"][:]
+        y_train = data[f"{dataset}/y_train"][:]
+        X_test = data[f"{dataset}/X_test"][:]
+        y_test = data[f"{dataset}/y_test"][:]
+    elif dataset.startswith("mi"):
+        npz = np.load(f"data/{dataset}.npz", allow_pickle=True)
+        X_train = npz['arr_0']
+        y_train = npz['arr_1']
+        X_test = npz['arr_2']
+        X_train = npz['arr_3']
+    else:
+        X_train = y_train = X_test = y_test = None
 
     return X_train, y_train, X_test, y_test
 
 
-def ml_method_setup(method, X_train, sig_train, y_train, file_name):
+def ml_method_setup(method, X_train, sig_train, y_train, file_name, reduced=False):
     if method == 'ts_knn':
         try:
             clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
-            clf = GridSearchCV(
-                Pipeline([
-                    ('knn', KNeighborsTimeSeriesClassifier())
-                ]),
-                {'knn__n_neighbors': range(3, 30, 2), 'knn__weights': ['uniform', 'distance']},
-                cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
-                n_jobs=-1,
-                verbose=10
-            )
+            if reduced:
+                clf = GridSearchCV(
+                    Pipeline([
+                        ('knn', KNeighborsTimeSeriesClassifier())
+                    ]),
+                    {'knn__n_neighbors': range(3, 30, 4), 'knn__weights': ['uniform', 'distance']},
+                    cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
+                    n_jobs=-1,
+                    verbose=10
+                )
+            else:
+                clf = GridSearchCV(
+                    Pipeline([
+                        ('knn', KNeighborsTimeSeriesClassifier())
+                    ]),
+                    {'knn__n_neighbors': range(3, 30, 2), 'knn__weights': ['uniform', 'distance']},
+                    cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
+                    n_jobs=-1,
+                    verbose=10
+                )
             clf.fit(X_train, y_train)
             joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
@@ -274,16 +290,28 @@ def ml_method_setup(method, X_train, sig_train, y_train, file_name):
         try:
             clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
-            clf = GridSearchCV(
-                Pipeline([
-                    ('svc', TimeSeriesSVC(random_state=0, probability=True))
-                ]),
-                {'svc__kernel': ['gak', 'rbf', 'poly'], 'svc__shrinking': [True, False],
-                 'svc__C': [0.1, 0.2, 0.5, 1, 2, 5, 10]},
-                cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
-                n_jobs=-1,
-                verbose=10
-            )
+            if reduced:
+                clf = GridSearchCV(
+                    Pipeline([
+                        ('svc', TimeSeriesSVC(random_state=0, probability=True))
+                    ]),
+                    {'svc__kernel': ['rbf', 'poly'], 'svc__shrinking': [True, False],
+                     'svc__C': [0.1, 0.2, 0.5, 1, 2, 5, 10]},
+                    cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
+                    n_jobs=-1,
+                    verbose=10
+                )
+            else:
+                clf = GridSearchCV(
+                    Pipeline([
+                        ('svc', TimeSeriesSVC(random_state=0, probability=True))
+                    ]),
+                    {'svc__kernel': ['gak', 'rbf', 'poly'], 'svc__shrinking': [True, False],
+                     'svc__C': [0.1, 0.2, 0.5, 1, 2, 5, 10]},
+                    cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
+                    n_jobs=-1,
+                    verbose=10
+                )
             clf.fit(X_train, y_train)
             joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
 
@@ -410,7 +438,10 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     if time_aug:
         file_name += "_time_aug"
 
-    clf = ml_method_setup(method, X_train, sig_train, y_train, file_name)
+    if dataset.startswith("mi"):
+        clf = ml_method_setup(method, X_train, sig_train, y_train, file_name, reduced=True)
+    else:
+        clf = ml_method_setup(method, X_train, sig_train, y_train, file_name)
 
     # fit to data
     if method.startswith("ts"):
@@ -504,5 +535,5 @@ def run_all():
 
 
 if __name__ == '__main__':
-    # run_all()
-    write_motor_imagery()
+    run_all()
+    # write_motor_imagery()
