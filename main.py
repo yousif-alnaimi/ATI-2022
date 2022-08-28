@@ -251,7 +251,7 @@ def read_data(dataset="alcoholic_1"):
         X_train = npz['arr_0']
         y_train = npz['arr_1']
         X_test = npz['arr_2']
-        X_train = npz['arr_3']
+        y_test = npz['arr_3']
     else:
         X_train = y_train = X_test = y_test = None
 
