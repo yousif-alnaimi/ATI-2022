@@ -22,6 +22,7 @@ from sklearn.metrics import f1_score
 import joblib
 import h5py
 import mne
+from copy import copy
 
 data_list = ['alcoholic_1', 'alcoholic_12', 'alcoholic_21', 'mi_real_lr', 'mi_imagine_lr',
              'mi_real_both', 'mi_imagine_both']
@@ -157,8 +158,13 @@ def write_motor_imagery():
 
                     split_indices = raw_ev[:, 0]
                     labels = raw_ev[:, 2]
-                    split_data = np.vsplit(raw_data, split_indices[1:])
-                    split_data = np.array(split_data)
+
+                    if len(split_indices) >= 2 and run_no not in {1, 2}:
+                        split_data = np.vsplit(raw_data, split_indices[1:])
+                        split_data = [np.pad(i, [(0, 1000-i.shape[0]), (0, 0)], 'constant',
+                                             constant_values=np.nan) for i in split_data]
+                    else:
+                        split_data = [raw_data]
 
                     for k in range(len(split_data)):
                         if run_no in {3, 7, 11}:
@@ -174,69 +180,47 @@ def write_motor_imagery():
                             raw_list_imagine_both.append(split_data[k])
                             ev_list_imagine_both.append(labels[k])
 
-    # shape_list_real_lr = []
-    # shape_list_imagine_lr = []
-    # shape_list_real_both = []
-    # shape_list_imagine_both = []
-    #
-    # for i in raw_list_real_lr:
-    #     shape_list_real_lr.append(i.shape[0])
-    # for i in raw_list_imagine_lr:
-    #     shape_list_imagine_lr.append(i.shape[0])
-    # for i in raw_list_real_both:
-    #     shape_list_real_both.append(i.shape[0])
-    # for i in raw_list_imagine_both:
-    #     shape_list_imagine_both.append(i.shape[0])
-    #
-    # max_length_real_lr = np.max(np.array(shape_list_real_lr))
-    # max_length_imagine_lr = np.max(np.array(shape_list_imagine_lr))
-    # max_length_real_both = np.max(np.array(shape_list_real_both))
-    # max_length_imagine_both = np.max(np.array(shape_list_imagine_both))
-    #
-    # for i in range(len(raw_list_real_lr)):
-    #     raw_list_real_lr[i] = np.r_[raw_list_real_lr[i],
-    #                                 np.zeros((max_length_real_lr - raw_list_real_lr[i].shape[0], 64),
-    #                                          dtype=raw_list_real_lr[i].dtype)]
-    #
-    # for i in range(len(raw_list_imagine_lr)):
-    #     raw_list_imagine_lr[i] = np.r_[raw_list_imagine_lr[i],
-    #                                    np.zeros((max_length_imagine_lr - raw_list_imagine_lr[i].shape[0], 64),
-    #                                             dtype=raw_list_imagine_lr[i].dtype)]
-    #
-    # for i in range(len(raw_list_real_both)):
-    #     raw_list_real_both[i] = np.r_[raw_list_real_both[i],
-    #                                   np.zeros((max_length_real_both - raw_list_real_both[i].shape[0], 64),
-    #                                            dtype=raw_list_real_both[i].dtype)]
-    #
-    # for i in range(len(raw_list_imagine_both)):
-    #     raw_list_imagine_both[i] = np.r_[raw_list_imagine_both[i],
-    #                                      np.zeros((max_length_imagine_both - raw_list_imagine_both[i].shape[0], 64),
-    #                                               dtype=raw_list_imagine_both[i].dtype)]
-
-    raw_arr_real_lr = np.array(raw_list_real_lr)
-    ev_arr_real_lr = np.array(ev_list_real_lr)
-    raw_arr_imagine_lr = np.array(raw_list_imagine_lr)
-    ev_arr_imagine_lr = np.array(ev_list_imagine_lr)
-    raw_arr_real_both = np.array(raw_list_real_both)
-    ev_arr_real_both = np.array(ev_list_real_both)
-    raw_arr_imagine_both = np.array(raw_list_imagine_both)
-    ev_arr_imagine_both = np.array(ev_list_imagine_both)
-
-    for i in subsets:
+    for i in tqdm(subsets):
         if i.endswith("real_lr"):
-            X_train, X_test, y_train, y_test = train_test_split(raw_arr_real_lr, ev_arr_real_lr,
+            X_train, X_test, y_train, y_test = train_test_split(raw_list_real_lr, ev_list_real_lr,
                                                                 test_size=0.25, random_state=0)
         elif i.endswith("imagine_lr"):
-            X_train, X_test, y_train, y_test = train_test_split(raw_arr_imagine_lr, ev_arr_imagine_lr,
+            X_train, X_test, y_train, y_test = train_test_split(raw_list_imagine_lr, ev_list_imagine_lr,
                                                                 test_size=0.25, random_state=0)
         elif i.endswith("real_both"):
-            X_train, X_test, y_train, y_test = train_test_split(raw_arr_real_both, ev_arr_real_both,
+            X_train, X_test, y_train, y_test = train_test_split(raw_list_real_both, ev_list_real_both,
                                                                 test_size=0.25, random_state=0)
         elif i.endswith("imagine_both"):
-            X_train, X_test, y_train, y_test = train_test_split(raw_arr_imagine_both, ev_arr_imagine_both,
+            X_train, X_test, y_train, y_test = train_test_split(raw_list_imagine_both, ev_list_imagine_both,
                                                                 test_size=0.25, random_state=0)
 
+        X_train = np.array(X_train)
+        X_test = np.array(X_test)
+        y_train = np.array(y_train)
+        y_test = np.array(y_test)
+
+        print(X_train.shape, y_train.shape, X_test.shape, y_test.shape, sep="\n")
+
         np.savez(f"data/{i}.npz", X_train, y_train, X_test, y_test)
+
+
+def move_to_hdf():
+    for i in tqdm(os.listdir("data")):
+        if i.endswith("npz"):
+            npz = np.load(f"data/{i}", allow_pickle=True)
+            X_train = npz['arr_0']
+            y_train = npz['arr_1']
+            X_test = npz['arr_2']
+            y_test = npz['arr_3']
+
+            print(X_train.shape, y_train.shape, X_test.shape, y_test.shape, sep="\n")
+
+            f = h5py.File("data/data.h5", 'a')
+            grp = f.create_group(i[:-4])
+            grp.create_dataset("X_train", data=X_train, compression="gzip", compression_opts=7)
+            grp.create_dataset("y_train", data=y_train, compression="gzip", compression_opts=7)
+            grp.create_dataset("X_test", data=X_test, compression="gzip", compression_opts=7)
+            grp.create_dataset("y_test", data=y_test, compression="gzip", compression_opts=7)
 
 
 def read_data(dataset="alcoholic_1"):
@@ -255,6 +239,8 @@ def read_data(dataset="alcoholic_1"):
     else:
         X_train = y_train = X_test = y_test = None
 
+    print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+
     return X_train, y_train, X_test, y_test
 
 
@@ -268,7 +254,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, file_name, reduced=Fals
                     Pipeline([
                         ('knn', KNeighborsTimeSeriesClassifier())
                     ]),
-                    {'knn__n_neighbors': range(3, 30, 4), 'knn__weights': ['uniform', 'distance']},
+                    {'knn__n_neighbors': range(3, 30, 6), 'knn__weights': ['uniform', 'distance']},
                     cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
                     n_jobs=-1,
                     verbose=10
@@ -296,7 +282,7 @@ def ml_method_setup(method, X_train, sig_train, y_train, file_name, reduced=Fals
                         ('svc', TimeSeriesSVC(random_state=0, probability=True))
                     ]),
                     {'svc__kernel': ['rbf', 'poly'], 'svc__shrinking': [True, False],
-                     'svc__C': [0.1, 0.2, 0.5, 1, 2, 5, 10]},
+                     'svc__C': [0.1, 1, 10]},
                     cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=0),
                     n_jobs=-1,
                     verbose=10
@@ -331,8 +317,12 @@ def ml_method_setup(method, X_train, sig_train, y_train, file_name, reduced=Fals
             clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             svc = SVC(random_state=0, probability=True)
-            parameters = {'kernel': ['rbf', 'poly'], 'shrinking': [True, False],
-                          'C': [0.1, 0.2, 0.5, 1, 2, 5, 10]}
+            if reduced:
+                parameters = {'kernel': ['rbf', 'poly'], 'shrinking': [True, False],
+                              'C': [0.1, 1, 10]}
+            else:
+                parameters = {'kernel': ['rbf', 'poly'], 'shrinking': [True, False],
+                              'C': [0.1, 0.2, 0.5, 1, 2, 5, 10]}
             clf = GridSearchCV(svc, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
             joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
@@ -352,7 +342,10 @@ def ml_method_setup(method, X_train, sig_train, y_train, file_name, reduced=Fals
             clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             ada = AdaBoostClassifier(random_state=0)
-            parameters = {'n_estimators': [50, 100, 150], 'learning_rate': [0.1, 0.5, 1, 2]}
+            if reduced:
+                parameters = {'n_estimators': [50, 100], 'learning_rate': [0.5, 1, 2]}
+            else:
+                parameters = {'n_estimators': [50, 100, 150], 'learning_rate': [0.1, 0.5, 1, 2]}
             clf = GridSearchCV(ada, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
             joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
@@ -362,11 +355,18 @@ def ml_method_setup(method, X_train, sig_train, y_train, file_name, reduced=Fals
             clf = joblib.load(open(f'models/{file_name}.pkl', 'rb'))
         except:  # noqa E722
             rf = RandomForestClassifier(random_state=0)
-            parameters = {'min_weight_fraction_leaf': [0.01, 0.1, 0.5],
-                          'bootstrap': [True, False],
-                          'max_depth': (2, 5, 10),
-                          'max_leaf_nodes': (2, 5, 10),
-                          'n_estimators': (100, 200, 300)}
+            if reduced:
+                parameters = {'min_weight_fraction_leaf': [0.1, 0.5],
+                              'bootstrap': [True, False],
+                              'max_depth': (2, 5),
+                              'max_leaf_nodes': (2, 5),
+                              'n_estimators': (100, 200)}
+            else:
+                parameters = {'min_weight_fraction_leaf': [0.01, 0.1, 0.5],
+                              'bootstrap': [True, False],
+                              'max_depth': (2, 5, 10),
+                              'max_leaf_nodes': (2, 5, 10),
+                              'n_estimators': (100, 200, 300)}
             clf = GridSearchCV(rf, parameters, n_jobs=-1, verbose=10)
             clf.fit(sig_train, y_train)
             joblib.dump(clf.best_estimator_, f'models/{file_name}.pkl')
@@ -395,6 +395,7 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     scaler = StandardScaler()
 
     if time_aug:
+        print(X_train.shape)
         X_train = np.array(list(map(time_augment, X_train)))
         X_test = np.array(list(map(time_augment, X_test)))
 
@@ -535,5 +536,6 @@ def run_all():
 
 
 if __name__ == '__main__':
-    run_all()
+    # run_all()
+    move_to_hdf()
     # write_motor_imagery()
