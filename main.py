@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import os
 from tqdm import tqdm
 from plot_metric.functions import BinaryClassification
+from tslearn.datasets import UCR_UEA_datasets
 from tslearn.neighbors import KNeighborsTimeSeriesClassifier
 from tslearn.svm import TimeSeriesSVC
 from tslearn.preprocessing import TimeSeriesScalerMinMax
@@ -22,10 +23,34 @@ from sklearn.metrics import f1_score
 import joblib
 import h5py
 import mne
-from copy import copy
 
-data_list = ['alcoholic_1', 'alcoholic_12', 'alcoholic_21', 'mi_real_lr', 'mi_imagine_lr',
-             'mi_real_both', 'mi_imagine_both']
+data_list = ['alcoholic_1', 'alcoholic_12', 'alcoholic_21', 'EyesOpenShut', 'FingerMovements']
+
+
+def write_uea(dataset):
+    data = UCR_UEA_datasets().load_dataset(dataset)
+    if dataset == "EyesOpenShut":
+        X_train = np.array(data[0])
+        y_train = np.array(data[1]).astype('int32')
+        X_test = np.array(data[2])
+        y_test = np.array(data[3]).astype('int32')
+    elif dataset == "FingerMovements":
+        X_train = np.array(data[0])
+        y_train = np.array(data[1])
+        X_test = np.array(data[2])
+        y_test = np.array(data[3])
+        lut = ['left', 'right']
+        y_train = np.searchsorted(lut, y_train)
+        y_test = np.searchsorted(lut, y_test)
+
+    print(X_train, y_train, X_test, y_test, sep="\n")
+
+    f = h5py.File("data/data.h5", 'a')
+    grp = f.create_group(dataset)
+    grp.create_dataset("X_train", data=X_train, compression="gzip", compression_opts=7)
+    grp.create_dataset("y_train", data=y_train, compression="gzip", compression_opts=7)
+    grp.create_dataset("X_test", data=X_test, compression="gzip", compression_opts=7)
+    grp.create_dataset("y_test", data=y_test, compression="gzip", compression_opts=7)
 
 
 def write_alcoholic(subset='1'):
@@ -224,22 +249,11 @@ def move_to_hdf():
 
 
 def read_data(dataset="alcoholic_1"):
-    if dataset.startswith("alcoholic"):
-        data = h5py.File("data/data.h5", 'r')
-        X_train = data[f"{dataset}/X_train"][:]
-        y_train = data[f"{dataset}/y_train"][:]
-        X_test = data[f"{dataset}/X_test"][:]
-        y_test = data[f"{dataset}/y_test"][:]
-    elif dataset.startswith("mi"):
-        npz = np.load(f"data/{dataset}.npz", allow_pickle=True)
-        X_train = npz['arr_0']
-        y_train = npz['arr_1']
-        X_test = npz['arr_2']
-        y_test = npz['arr_3']
-    else:
-        X_train = y_train = X_test = y_test = None
-
-    print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+    data = h5py.File("data/data.h5", 'r')
+    X_train = data[f"{dataset}/X_train"][:]
+    y_train = data[f"{dataset}/y_train"][:]
+    X_test = data[f"{dataset}/X_test"][:]
+    y_test = data[f"{dataset}/y_test"][:]
 
     return X_train, y_train, X_test, y_test
 
@@ -393,9 +407,13 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
     # initialise scalers
     ts_scaler = TimeSeriesScalerMinMax()
     scaler = StandardScaler()
+    if dataset.startswith("mi"):
+        X_train = np.nan_to_num(X_train[:1000])
+        X_test = np.nan_to_num(X_test[:250])
+        y_train = np.nan_to_num(y_train[:1000])
+        y_test = np.nan_to_num(y_test[:250])
 
     if time_aug:
-        print(X_train.shape)
         X_train = np.array(list(map(time_augment, X_train)))
         X_test = np.array(list(map(time_augment, X_test)))
 
@@ -464,7 +482,10 @@ def auto_ml(X_train, y_train, X_test, y_test, method, sig_level, dataset, ts_sca
 
     score_df = pd.DataFrame(columns=["Accuracy", "AUC", "F1 Measure", "Mean CV on Train"], index=["value"])
     accuracy = accuracy_score(y_test, y_pred)
-    roc_auc = roc_auc_score(y_test, y_pred_proba)
+    if len(np.unique(y_train)) > 2:
+        roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class='ovr')
+    else:
+        roc_auc = roc_auc_score(y_test, y_pred_proba)
     f1 = f1_score(y_test, y_pred)
 
     score_df["Accuracy"] = accuracy
@@ -536,6 +557,5 @@ def run_all():
 
 
 if __name__ == '__main__':
-    # run_all()
-    move_to_hdf()
-    # write_motor_imagery()
+    run_all()
+    # write_uea("FingerMovements")
